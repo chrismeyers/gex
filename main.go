@@ -38,12 +38,10 @@ func main() {
 			fmt.Fprintf(&line, "%02x", chunk[i])
 
 			value, _ := hex.DecodeString(string(fmt.Sprintf("%02x", chunk[i])))
-			str := string(value)
-			switch str {
-			case "\n", "\t":
+			if value[0] < 32 || value[0] > 126 { // non-printable ASCII range
 				ascii.WriteString(".")
-			default:
-				ascii.WriteString(str)
+			} else {
+				ascii.WriteString(string(value))
 			}
 
 			line.WriteString(" ")
