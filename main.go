@@ -10,6 +10,10 @@ import (
 	"strings"
 )
 
+type Opts struct {
+	verbose bool
+}
+
 type Line struct {
 	displacement int
 	hex          []string
@@ -28,8 +32,14 @@ type Dump struct {
 	displacement int
 }
 
-func (d Dump) Render(w io.Writer) {
-	for _, line := range d.lines {
+func (d Dump) Render(w io.Writer, opts Opts) {
+	for i, line := range d.lines {
+		if i > 0 && !opts.verbose {
+			if slices.Equal(line.hex, d.lines[i-1].hex) {
+				fmt.Fprintln(w, "*")
+				continue
+			}
+		}
 		fmt.Fprintln(w, line.String())
 	}
 	if (d.displacement % 16) != 0 {
@@ -66,11 +76,18 @@ func parse(input []byte) Dump {
 }
 
 func main() {
+	verbose := flag.Bool("v", false, "display all input data")
+
+	flag.Usage = func() {
+		w := flag.CommandLine.Output()
+		fmt.Fprintf(w, "Usage: gex [-v] <file>\n")
+		flag.PrintDefaults()
+	}
 	flag.Parse()
 
 	inputFile := flag.Arg(0)
 	if inputFile == "" {
-		fmt.Println("Usage: gex <input file>")
+		flag.Usage()
 		os.Exit(1)
 	}
 
@@ -79,6 +96,8 @@ func main() {
 		panic(err)
 	}
 
+	opts := Opts{verbose: *verbose}
+
 	dump := parse(input)
-	dump.Render(os.Stdout)
+	dump.Render(os.Stdout, opts)
 }
