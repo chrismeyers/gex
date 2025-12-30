@@ -42,22 +42,20 @@ func parse(input []byte) Dump {
 	displacement := 0
 
 	for chunk := range slices.Chunk(input, 16) {
-		var line Line
-		line.displacement = displacement
+		line := Line{
+			displacement: displacement,
+			hex:          slices.Repeat([]string{"  "}, 16),
+			ascii:        "",
+		}
 
 		for i := range chunk {
-			line.hex = append(line.hex, fmt.Sprintf("%02x", chunk[i]))
+			line.hex[i] = fmt.Sprintf("%02x", chunk[i])
 
 			value, _ := hex.DecodeString(string(fmt.Sprintf("%02x", chunk[i])))
 			if value[0] < 32 || value[0] > 126 { // non-printable ASCII range
 				line.ascii += "."
 			} else {
 				line.ascii += string(value)
-			}
-		}
-		if len(line.hex) < 16 {
-			for i := 0; i < 16-len(line.hex); i++ {
-				line.hex = append(line.hex, "  ")
 			}
 		}
 		lines = append(lines, line)
