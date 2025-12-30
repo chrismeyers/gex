@@ -4,12 +4,68 @@ import (
 	"encoding/hex"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"slices"
 	"strings"
 )
 
-const LINE_LENGTH = 60
+type Line struct {
+	displacement int
+	hex          []string
+	ascii        string
+}
+
+func (l Line) String() string {
+	hex1 := strings.Join(l.hex[:8], " ")
+	hex2 := strings.Join(l.hex[8:], " ")
+
+	return fmt.Sprintf("%08x  %-24s %-24s |%s|", l.displacement, hex1, hex2, l.ascii)
+}
+
+type Dump struct {
+	lines        []Line
+	displacement int
+}
+
+func (d Dump) Render(w io.Writer) {
+	for _, line := range d.lines {
+		fmt.Fprintln(w, line.String())
+	}
+	if (d.displacement % 16) != 0 {
+		fmt.Fprintf(w, "%08x\n", d.displacement)
+	}
+}
+
+func parse(input []byte) Dump {
+	lines := []Line{}
+	displacement := 0
+
+	for chunk := range slices.Chunk(input, 16) {
+		var line Line
+		line.displacement = displacement
+
+		for i := range chunk {
+			line.hex = append(line.hex, fmt.Sprintf("%02x", chunk[i]))
+
+			value, _ := hex.DecodeString(string(fmt.Sprintf("%02x", chunk[i])))
+			if value[0] < 32 || value[0] > 126 { // non-printable ASCII range
+				line.ascii += "."
+			} else {
+				line.ascii += string(value)
+			}
+		}
+		if len(line.hex) < 16 {
+			for i := 0; i < 16-len(line.hex); i++ {
+				line.hex = append(line.hex, "  ")
+			}
+		}
+		lines = append(lines, line)
+		displacement += len(chunk)
+	}
+
+	return Dump{lines, displacement}
+}
 
 func main() {
 	flag.Parse()
@@ -25,36 +81,6 @@ func main() {
 		panic(err)
 	}
 
-	displacement := 0
-	for chunk := range slices.Chunk(input, 16) {
-		var line strings.Builder
-		fmt.Fprintf(&line, "%08x  ", displacement)
-
-		var ascii strings.Builder
-		for i := range chunk {
-			if i == 8 {
-				line.WriteString(" ")
-			}
-			fmt.Fprintf(&line, "%02x", chunk[i])
-
-			value, _ := hex.DecodeString(string(fmt.Sprintf("%02x", chunk[i])))
-			if value[0] < 32 || value[0] > 126 { // non-printable ASCII range
-				ascii.WriteString(".")
-			} else {
-				ascii.WriteString(string(value))
-			}
-
-			line.WriteString(" ")
-		}
-		if line.Len() < LINE_LENGTH {
-			line.WriteString(strings.Repeat(" ", LINE_LENGTH-line.Len()))
-		}
-		fmt.Fprintf(&line, "|%s|", ascii.String())
-		fmt.Println(line.String())
-		displacement += len(chunk)
-	}
-
-	if (displacement % 16) != 0 {
-		fmt.Printf("%08x\n", displacement)
-	}
+	dump := parse(input)
+	dump.Render(os.Stdout)
 }
