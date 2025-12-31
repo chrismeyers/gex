@@ -1,7 +1,7 @@
 # gex - (G)o h(ex) dump
 
 A simple [hex dump](https://en.wikipedia.org/wiki/Hex_dump) utility.
-The behavior of this program mimics `hexdump`:
+The behavior of this program mimics `hexdump(1)`:
 
 ```
 $ go run . -C -v input/sample.txt
