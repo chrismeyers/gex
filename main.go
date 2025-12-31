@@ -11,7 +11,8 @@ import (
 )
 
 type Opts struct {
-	verbose bool
+	canonical bool
+	verbose   bool
 }
 
 type Line struct {
@@ -20,11 +21,32 @@ type Line struct {
 	ascii        string
 }
 
-func (l Line) String() string {
-	hex1 := strings.Join(l.hex[:8], " ")
-	hex2 := strings.Join(l.hex[8:], " ")
+func (l Line) String(opts Opts) string {
+	var line string
 
-	return fmt.Sprintf("%08x  %-24s %-24s |%s|", l.displacement, hex1, hex2, l.ascii)
+	if opts.canonical {
+		hex1 := strings.Join(l.hex[:8], " ")
+		hex2 := strings.Join(l.hex[8:], " ")
+
+		line = fmt.Sprintf("%08x  %-24s %-24s |%s|", l.displacement, hex1, hex2, l.ascii)
+	} else {
+		var hex strings.Builder
+		for chunk := range slices.Chunk(l.hex, 2) {
+			part := strings.TrimSpace(chunk[1] + chunk[0])
+			if part == "" {
+				hex.WriteString("    ")
+			} else if len(part) < 4 {
+				fmt.Fprintf(&hex, "%04s", part)
+			} else {
+				hex.WriteString(part)
+			}
+			hex.WriteString(" ")
+		}
+
+		line = fmt.Sprintf("%07x %s", l.displacement, strings.TrimSuffix(hex.String(), " "))
+	}
+
+	return line
 }
 
 type Dump struct {
@@ -40,10 +62,14 @@ func (d Dump) Render(w io.Writer, opts Opts) {
 				continue
 			}
 		}
-		fmt.Fprintln(w, line.String())
+		fmt.Fprintln(w, line.String(opts))
 	}
 	if (d.displacement % 16) != 0 {
-		fmt.Fprintf(w, "%08x\n", d.displacement)
+		if opts.canonical {
+			fmt.Fprintf(w, "%08x\n", d.displacement)
+		} else {
+			fmt.Fprintf(w, "%07x\n", d.displacement)
+		}
 	}
 }
 
@@ -76,11 +102,12 @@ func parse(input []byte) Dump {
 }
 
 func main() {
+	canonical := flag.Bool("C", false, "canonical hex+ASCII display ")
 	verbose := flag.Bool("v", false, "display all input data")
 
 	flag.Usage = func() {
 		w := flag.CommandLine.Output()
-		fmt.Fprintf(w, "Usage: gex [-v] <file>\n")
+		fmt.Fprintf(w, "Usage: gex [-C -v] <file>\n")
 		flag.PrintDefaults()
 	}
 	flag.Parse()
@@ -96,7 +123,7 @@ func main() {
 		panic(err)
 	}
 
-	opts := Opts{verbose: *verbose}
+	opts := Opts{verbose: *verbose, canonical: *canonical}
 
 	dump := parse(input)
 	dump.Render(os.Stdout, opts)
