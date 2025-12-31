@@ -31,13 +31,13 @@ func (l Line) String(opts Opts) string {
 
 		line = fmt.Sprintf("%08x  %-24s %-24s |%s|", l.offset, hex1, hex2, l.ascii)
 	} else if opts.character {
-		var hex strings.Builder
+		var ascii strings.Builder
 		for _, chunk := range l.hex {
-			fmt.Fprintf(&hex, "%3s", toASCII(chunk, true))
-			hex.WriteString(" ")
+			fmt.Fprintf(&ascii, "%3s", toASCII(chunk, true))
+			ascii.WriteString(" ")
 		}
 
-		line = fmt.Sprintf("%07x %s", l.offset, strings.TrimSuffix(hex.String(), " "))
+		line = fmt.Sprintf("%07x %s", l.offset, strings.TrimSuffix(ascii.String(), " "))
 	} else {
 		var hex strings.Builder
 		for chunk := range slices.Chunk(l.hex, 2) {
