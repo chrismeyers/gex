@@ -55,15 +55,22 @@ type Dump struct {
 }
 
 func (d Dump) Render(w io.Writer, opts Opts) {
+	dupe := false
+
 	for i, line := range d.lines {
 		if i > 0 && !opts.verbose {
 			if slices.Equal(line.hex, d.lines[i-1].hex) {
-				fmt.Fprintln(w, "*")
+				dupe = true
 				continue
+			}
+			if dupe {
+				dupe = false
+				fmt.Fprintln(w, "*")
 			}
 		}
 		fmt.Fprintln(w, line.String(opts))
 	}
+
 	if (d.displacement % 16) != 0 {
 		if opts.canonical {
 			fmt.Fprintf(w, "%08x\n", d.displacement)
