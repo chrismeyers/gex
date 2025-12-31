@@ -16,9 +16,9 @@ type Opts struct {
 }
 
 type Line struct {
-	displacement int
-	hex          []string
-	ascii        string
+	offset int
+	hex    []string
+	ascii  string
 }
 
 func (l Line) String(opts Opts) string {
@@ -28,7 +28,7 @@ func (l Line) String(opts Opts) string {
 		hex1 := strings.Join(l.hex[:8], " ")
 		hex2 := strings.Join(l.hex[8:], " ")
 
-		line = fmt.Sprintf("%08x  %-24s %-24s |%s|", l.displacement, hex1, hex2, l.ascii)
+		line = fmt.Sprintf("%08x  %-24s %-24s |%s|", l.offset, hex1, hex2, l.ascii)
 	} else {
 		var hex strings.Builder
 		for chunk := range slices.Chunk(l.hex, 2) {
@@ -43,15 +43,15 @@ func (l Line) String(opts Opts) string {
 			hex.WriteString(" ")
 		}
 
-		line = fmt.Sprintf("%07x %s", l.displacement, strings.TrimSuffix(hex.String(), " "))
+		line = fmt.Sprintf("%07x %s", l.offset, strings.TrimSuffix(hex.String(), " "))
 	}
 
 	return line
 }
 
 type Dump struct {
-	lines        []Line
-	displacement int
+	lines  []Line
+	offset int
 }
 
 func (d Dump) Render(w io.Writer, opts Opts) {
@@ -72,21 +72,21 @@ func (d Dump) Render(w io.Writer, opts Opts) {
 	}
 
 	if opts.canonical {
-		fmt.Fprintf(w, "%08x\n", d.displacement)
+		fmt.Fprintf(w, "%08x\n", d.offset)
 	} else {
-		fmt.Fprintf(w, "%07x\n", d.displacement)
+		fmt.Fprintf(w, "%07x\n", d.offset)
 	}
 }
 
 func parse(input []byte) Dump {
 	lines := []Line{}
-	displacement := 0
+	offset := 0
 
 	for chunk := range slices.Chunk(input, 16) {
 		line := Line{
-			displacement: displacement,
-			hex:          slices.Repeat([]string{"  "}, 16),
-			ascii:        "",
+			offset: offset,
+			hex:    slices.Repeat([]string{"  "}, 16),
+			ascii:  "",
 		}
 
 		for i := range chunk {
@@ -100,10 +100,10 @@ func parse(input []byte) Dump {
 			}
 		}
 		lines = append(lines, line)
-		displacement += len(chunk)
+		offset += len(chunk)
 	}
 
-	return Dump{lines, displacement}
+	return Dump{lines, offset}
 }
 
 func main() {
