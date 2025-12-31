@@ -17,6 +17,7 @@ install: build
 
 test:
 	$(GOTEST) ./...
+	./test.sh
 
 clean:
 	$(GOCLEAN)
