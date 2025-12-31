@@ -11,6 +11,7 @@ import (
 )
 
 type Opts struct {
+	character bool
 	canonical bool
 	verbose   bool
 }
@@ -29,6 +30,14 @@ func (l Line) String(opts Opts) string {
 		hex2 := strings.Join(l.hex[8:], " ")
 
 		line = fmt.Sprintf("%08x  %-24s %-24s |%s|", l.offset, hex1, hex2, l.ascii)
+	} else if opts.character {
+		var hex strings.Builder
+		for _, chunk := range l.hex {
+			fmt.Fprintf(&hex, "%3s", toASCII(chunk, true))
+			hex.WriteString(" ")
+		}
+
+		line = fmt.Sprintf("%07x %s", l.offset, strings.TrimSuffix(hex.String(), " "))
 	} else {
 		var hex strings.Builder
 		for chunk := range slices.Chunk(l.hex, 2) {
@@ -91,13 +100,7 @@ func parse(input []byte) Dump {
 
 		for i := range chunk {
 			line.hex[i] = fmt.Sprintf("%02x", chunk[i])
-
-			value, _ := hex.DecodeString(string(fmt.Sprintf("%02x", chunk[i])))
-			if value[0] < 32 || value[0] > 126 { // non-printable ASCII range
-				line.ascii += "."
-			} else {
-				line.ascii += string(value)
-			}
+			line.ascii += toASCII(line.hex[i], false)
 		}
 		lines = append(lines, line)
 		offset += len(chunk)
@@ -106,13 +109,45 @@ func parse(input []byte) Dump {
 	return Dump{lines, offset}
 }
 
+func toASCII(s string, raw bool) string {
+	bytes, _ := hex.DecodeString(s)
+	if len(bytes) > 0 && (bytes[0] < 32 || bytes[0] > 126) {
+		if raw {
+			switch bytes[0] {
+			case 0:
+				return "\\0"
+			case 7:
+				return "\\a"
+			case 8:
+				return "\\b"
+			case 9:
+				return "\\t"
+			case 10:
+				return "\\n"
+			case 11:
+				return "\\v"
+			case 12:
+				return "\\f"
+			case 13:
+				return "\\r"
+			default:
+				// TODO: match `hexdump -c` behavior here for unknown chars (octal conversion?)
+			}
+		}
+		return "."
+	} else {
+		return string(bytes)
+	}
+}
+
 func main() {
-	canonical := flag.Bool("C", false, "canonical hex+ASCII display ")
+	character := flag.Bool("c", false, "one byte character display")
+	canonical := flag.Bool("C", false, "canonical hex+ASCII display")
 	verbose := flag.Bool("v", false, "display all input data")
 
 	flag.Usage = func() {
 		w := flag.CommandLine.Output()
-		fmt.Fprintf(w, "Usage: gex [-C -v] <file>\n")
+		fmt.Fprintf(w, "Usage: gex [-c -C -v] <file>\n")
 		flag.PrintDefaults()
 	}
 	flag.Parse()
@@ -128,7 +163,7 @@ func main() {
 		panic(err)
 	}
 
-	opts := Opts{verbose: *verbose, canonical: *canonical}
+	opts := Opts{character: *character, canonical: *canonical, verbose: *verbose}
 
 	dump := parse(input)
 	dump.Render(os.Stdout, opts)

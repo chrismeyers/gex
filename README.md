@@ -4,7 +4,7 @@ A simple [hex dump](https://en.wikipedia.org/wiki/Hex_dump) utility.
 The behavior of this program mimics `hexdump`:
 
 ```
-$ go run . -C -v input/wikipedia.txt
+$ go run . -C -v input/sample.txt
 00000000  30 31 32 33 34 35 36 37  38 39 41 42 43 44 45 46  |0123456789ABCDEF|
 00000010  0a 2f 2a 20 2a 2a 2a 2a  2a 2a 2a 2a 2a 2a 2a 2a  |./* ************|
 00000020  2a 2a 2a 2a 2a 2a 2a 2a  2a 2a 2a 2a 2a 2a 2a 2a  |****************|
