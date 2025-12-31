@@ -71,12 +71,10 @@ func (d Dump) Render(w io.Writer, opts Opts) {
 		fmt.Fprintln(w, line.String(opts))
 	}
 
-	if (d.displacement % 16) != 0 {
-		if opts.canonical {
-			fmt.Fprintf(w, "%08x\n", d.displacement)
-		} else {
-			fmt.Fprintf(w, "%07x\n", d.displacement)
-		}
+	if opts.canonical {
+		fmt.Fprintf(w, "%08x\n", d.displacement)
+	} else {
+		fmt.Fprintf(w, "%07x\n", d.displacement)
 	}
 }
 
