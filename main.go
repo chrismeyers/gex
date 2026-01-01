@@ -131,7 +131,8 @@ func toASCII(s string, raw bool) string {
 			case 13:
 				return "\\r"
 			default:
-				// TODO: match `hexdump -c` behavior here for unknown chars (octal conversion?)
+				// TODO: figure out why `hexdump -c` prints � for some characters here
+				return fmt.Sprintf("%03o", bytes[0])
 			}
 		}
 		return "."
